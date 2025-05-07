@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yh Utopia</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --space-dark: #0a0e17;
+            --star-color: #ffffff;
+            --primary-color: #a178ff; /* اللون الجديد */
+            --primary-text: #ffffff;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Tahoma', sans-serif;
+            background-color: #0a0e17;
+            color: var(--primary-text);
+            overflow-x: hidden;
+        }
+        
+        /* الغلاف الديناميكي */
+        .space-cover {
+            width: 100%;
+            height: 400px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        
+        .stars {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400" viewBox="0 0 800 400"><rect width="800" height="400" fill="%230a0e17"/><circle cx="100" cy="50" r="1" fill="white" opacity="0.8"/><circle cx="200" cy="150" r="1" fill="white" opacity="0.6"/><circle cx="300" cy="80" r="1.5" fill="white" opacity="0.9"/><circle cx="400" cy="200" r="1" fill="white" opacity="0.7"/><circle cx="500" cy="120" r="1" fill="white" opacity="0.5"/><circle cx="600" cy="300" r="1.5" fill="white" opacity="0.8"/><circle cx="700" cy="180" r="1" fill="white" opacity="0.6"/><circle cx="50" cy="250" r="1" fill="white" opacity="0.7"/><circle cx="150" cy="350" r="1.5" fill="white" opacity="0.9"/><circle cx="250" cy="280" r="1" fill="white" opacity="0.5"/><circle cx="350" cy="380" r="1" fill="white" opacity="0.8"/><circle cx="450" cy="320" r="1.5" fill="white" opacity="0.6"/><circle cx="550" cy="250" r="1" fill="white" opacity="0.7"/><circle cx="650" cy="150" r="1" fill="white" opacity="0.9"/><circle cx="750" cy="70" r="1.5" fill="white" opacity="0.5"/></svg>') repeat;
+            animation: twinkle 8s infinite alternate;
+        }
+        
+        .shooting-star {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            box-shadow: 0 0 10px 2px var(--primary-color);
+            animation: shooting 15s linear infinite;
+            opacity: 0;
+        }
+        
+        @keyframes twinkle {
+            0% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        @keyframes shooting {
+            0% { transform: translateX(0) translateY(0); opacity: 0; }
+            10% { opacity: 1; }
+            100% { transform: translateX(1000px) translateY(300px); opacity: 0; }
+        }
+        
+        .cover-content {
+            position: relative;
+            z-index: 10;
+            padding: 20px;
+            text-shadow: 0 0 10px var(--primary-color);
+        }
+        
+        .cover-title {
+            font-size: 3rem;
+            margin: 0;
+            color: var(--primary-color);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        .cover-subtitle {
+            font-size: 1.5rem;
+            margin-top: 15px;
+            animation: glow 2s ease-in-out infinite alternate 0.5s;
+        }
+        
+        @keyframes glow {
+            from { text-shadow: 0 0 5px var(--primary-color), 0 0 10px var(--primary-color); }
+            to { text-shadow: 0 0 10px var(--primary-color), 0 0 20px var(--primary-color), 0 0 30px #7d4dff; }
+        }
+        
+        /* بقية التنسيقات */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .projects-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            margin-top: 40px;
+        }
+        
+        @media (min-width: 768px) {
+            .projects-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .cover-title {
+                font-size: 4rem;
+            }
+            
+            .cover-subtitle {
+                font-size: 2rem;
+            }
+        }
+        
+        /* بطاقات المشاريع */
+        .project-card {
+            background: rgba(10, 14, 23, 0.7);
+            border: 1px solid var(--primary-color);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(161, 120, 255, 0.2);
+        }
+        
+        .project-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 25px rgba(161, 120, 255, 0.4);
+        }
+        
+        .project-image {
+            width: 100%;
+            height: 300px;
+            object-fit: contain;
+            background-color: rgba(0, 0, 0, 0.3);
+        }
+        
+        /* شريط التواصل */
+        .contact-bar {
+            background: rgba(10, 14, 23, 0.9);
+            padding: 20px 0;
+            border-top: 1px solid var(--primary-color);
+            border-bottom: 1px solid var(--primary-color);
+            margin: 30px 0;
+        }
+        
+        .contact-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--primary-color);
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+        
+        .contact-item:hover {
+            color: white;
+            text-shadow: 0 0 10px var(--primary-color);
+        }
+        
+        .contact-icon {
+            font-size: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- الغلاف الديناميكي -->
+    <div class="space-cover">
+        <div class="stars"></div>
+        <div class="shooting-star" style="top: 15%; left: 10%; animation-delay: 2s;"></div>
+        <div class="shooting-star" style="top: 30%; left: 20%; animation-delay: 7s;"></div>
+        <div class="shooting-star" style="top: 70%; left: 5%; animation-delay: 12s;"></div>
+        
+        <div class="cover-content">
+            <h1 class="cover-title">memories</h1>
+            <h2 class="cover-subtitle">Yusuf Hatim</h2>
+        </div>
+    </div>
+    
+    <!-- شريط التواصل -->
+    <div class="contact-bar">
+        <div class="contact-container">
+            <a href="tel:+201016538137" class="contact-item">
+                <i class="fas fa-phone contact-icon"></i>
+                <span>+201016538137</span>
+            </a>
+            <a href="mailto:yousofhatim91@gmail.com" class="contact-item">
+                <i class="fas fa-envelope contact-icon"></i>
+                <span>yousofhatim91@gmail.com</span>
+            </a>
+            <a href="https://www.linkedin.com/in/yusuf-hatim-17422a218?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" target="_blank" class="contact-item">
+                <i class="fab fa-linkedin contact-icon"></i>
+                <span>LinkedIn</span>
+            </a>
+        </div>
+    </div>
+    
+    <!-- معرض المشاريع -->
+    <div class="container">
+        <h1 style="text-align: center; color: var(--primary-color); margin-bottom: 30px;">Some projects</h1>
+        <div class="projects-grid" id="projectsContainer"></div>
+    </div>
+
+    <script>
+        // إنشاء نجوم عشوائية
+        function createStars() {
+            const starsContainer = document.querySelector('.stars');
+            const starCount = 100;
+            
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.style.position = 'absolute';
+                star.style.width = `${Math.random() * 2 + 1}px`;
+                star.style.height = star.style.width;
+                star.style.backgroundColor = 'white';
+                star.style.borderRadius = '50%';
+                star.style.top = `${Math.random() * 100}%`;
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.opacity = Math.random();
+                star.style.animation = `twinkle ${Math.random() * 5 + 3}s infinite alternate`;
+                starsContainer.appendChild(star);
+            }
+        }
+        
+        // التهيئة الفورية لـ Firebase
+        (function init() {
+            const firebaseConfig = {
+                apiKey: "AIzaSyDhdID2wAdkpl-Hc-8mWvMz83PNfAgRto8",
+                databaseURL: "https://kid-id-default-rtdb.firebaseio.com"
+            };
+            firebase.initializeApp(firebaseConfig);
+            createStars();
+        })();
+
+        const db = firebase.database();
+
+        async function loadProjects() {
+            try {
+                const projectsPhotosSnapshot = await db.ref('portfolio/projectsPhotos').once('value');
+                const projectsPhotos = projectsPhotosSnapshot.val();
+                const container = document.getElementById('projectsContainer');
+                container.innerHTML = '';
+
+                if (!projectsPhotos) {
+                    container.innerHTML = '<div style="color: var(--primary-color); text-align: center; grid-column: 1/-1;">لا توجد مشاريع حالياً</div>';
+                    return;
+                }
+
+                const projectsArray = Object.entries(projectsPhotos)
+                    .map(([id, photoUrl]) => ({
+                        id: Number(id),
+                        photoUrl: typeof photoUrl === 'string' ? photoUrl : photoUrl.photoURL
+                    }))
+                    .sort((a, b) => a.id - b.id);
+
+                for (const project of projectsArray) {
+                    try {
+                        const docRef = db.ref(`portfolio/projectDocuments/${project.id}/pdfURL`);
+                        const docSnapshot = await docRef.once('value');
+                        const pdfUrl = docSnapshot.val();
+
+                        if (!pdfUrl) throw new Error('الرابط غير موجود');
+
+                        createProjectCard(project.photoUrl, pdfUrl);
+                    } catch (error) {
+                        console.error(`خطأ في المشروع ${project.id}:`, error);
+                        createErrorCard(project.photoUrl);
+                    }
+                }
+            } catch (error) {
+                console.error('خطأ عام:', error);
+                alert('حدث خطأ في تحميل البيانات');
+            }
+        }
+
+        function createProjectCard(imageUrl, pdfUrl) {
+            const card = document.createElement('a');
+            card.className = 'project-card';
+            card.href = pdfUrl;
+            card.target = '_blank';
+            card.rel = 'noopener noreferrer';
+
+            const img = new Image();
+            img.className = 'project-image';
+            img.src = imageUrl;
+            img.alt = 'صورة المشروع';
+            img.onerror = () => {
+                img.src = 'https://via.placeholder.com/420x300/0a0e17/a178ff?text=صورة+غير+متوفرة';
+            };
+
+            card.appendChild(img);
+            document.getElementById('projectsContainer').appendChild(card);
+        }
+
+        function createErrorCard(imageUrl) {
+            const card = document.createElement('div');
+            card.className = 'project-card';
+            card.style.cursor = 'not-allowed';
+            card.onclick = () => alert('الملف غير متوفر حالياً');
+
+            const img = new Image();
+            img.className = 'project-image';
+            img.src = imageUrl;
+            img.alt = 'صورة المشروع';
+
+            card.appendChild(img);
+            document.getElementById('projectsContainer').appendChild(card);
+        }
+
+        window.addEventListener('DOMContentLoaded', loadProjects);
+    </script>
+</body>
+</html>
