@@ -814,7 +814,7 @@ async function getOpenAIResponse(prompt, question) {
                 'Authorization': `Bearer ${openaiApiKey}`
             },
             body: JSON.stringify({
-                model: "gpt-3.5-turbo",
+                model: "gpt-4o",
                 messages: [
                     { role: "system", content: prompt },
                     { role: "user", content: question }
@@ -2148,4 +2148,5 @@ function handleMediaClick(e) {
     } else {
         console.log('No media data found for click event', {type, url, description, mediaElement, button: mediaElement.closest('.media-button')});
     }
+
 }
