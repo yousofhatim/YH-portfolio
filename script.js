@@ -832,7 +832,7 @@ async function getOpenAIResponse(prompt, question) {
     }
 }
 
-// التواصل مع OpenAI API مع السياق
+// التواصل مع OpenAI API مع السياق - النسخة المحسنة
 async function getOpenAIResponseWithContext(messages) {
     if (!openaiApiKey) {
         return "عذراً، لا يمكن الوصول إلى خدمة الذكاء الاصطناعي في الوقت الحالي.";
@@ -847,18 +847,38 @@ async function getOpenAIResponseWithContext(messages) {
                 'Authorization': `Bearer ${openaiApiKey}`
             },
             body: JSON.stringify({
-                model: "gpt-3.5-turbo",
+                model: "gpt-4o", // ✅ النموذج الأقوى
                 messages: messages,
                 temperature: 0.7,
-                max_tokens: 500
+                max_tokens: 2500, // ✅ زيادة Tokens للرسائل الطويلة
+                stream: false // ✅ تأكد من إكمال الرسالة بالكامل
             })
         });
 
+        // التحقق من استجابة الـ API
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const data = await response.json();
+        
+        // التحقق من وجود الرد
+        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+            throw new Error('Invalid response format from OpenAI');
+        }
+        
         return data.choices[0].message.content;
     } catch (error) {
         console.error('خطأ في التواصل مع OpenAI مع السياق:', error);
-        return 'عذراً، حدث خطأ في معالجة طلبك. يرجى المحاولة مرة أخرى.';
+        
+        // رسائل خطأ أكثر وضوحاً
+        if (error.message.includes('quota')) {
+            return 'عذراً، تم تجاوز الحد المسموح لاستخدام الذكاء الاصطناعي. يرجى المحاولة لاحقاً.';
+        } else if (error.message.includes('rate limit')) {
+            return 'عذراً، عدد الطلبات كبير حالياً. يرجى الانتظار قليلاً ثم المحاولة مرة أخرى.';
+        } else {
+            return 'عذراً، حدث خطأ في معالجة طلبك. يرجى المحاولة مرة أخرى.';
+        }
     }
 }
 
@@ -2150,4 +2170,5 @@ function handleMediaClick(e) {
     }
 
 }
+
 
