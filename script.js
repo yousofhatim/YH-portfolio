@@ -371,14 +371,14 @@ async function openProjectModal(projectId, projectImage, pdfUrl) {
                         <i class="fab fa-youtube"></i>
                         <div class="media-label">${item.description || 'فيديو يوتيوب'}</div>
                     `;
-                    
+
                     // إضافة معالج نقر مباشر
                     button.addEventListener('click', function(e) {
                         e.preventDefault();
                         e.stopPropagation();
                         openMediaPreview('youtube', item.url, item.description, projectMediaData.otherMedia.indexOf(item), 'other');
                     });
-                    
+
                     youtubeContainer.appendChild(button);
                 });
             }
@@ -407,14 +407,14 @@ async function openProjectModal(projectId, projectImage, pdfUrl) {
                         <i class="fas fa-file-pdf"></i>
                         <div class="media-label">${item.description || 'ملف PDF'}</div>
                     `;
-                    
+
                     // إضافة معالج نقر مباشر
                     button.addEventListener('click', function(e) {
                         e.preventDefault();
                         e.stopPropagation();
                         openMediaPreview('pdf', item.url, item.description, projectMediaData.otherMedia.indexOf(item), 'other');
                     });
-                    
+
                     pdfContainer.appendChild(button);
                 });
             }
@@ -467,7 +467,7 @@ async function openProjectModal(projectId, projectImage, pdfUrl) {
         // إعداد الشات بوت للمشروع
         setupProjectChat(projectId);
 
-        
+
 
     } catch (error) {
         console.error('خطأ في تحميل تفاصيل المشروع:', error);
@@ -861,16 +861,16 @@ async function getOpenAIResponseWithContext(messages) {
         }
 
         const data = await response.json();
-        
+
         // التحقق من وجود الرد
         if (!data.choices || !data.choices[0] || !data.choices[0].message) {
             throw new Error('Invalid response format from OpenAI');
         }
-        
+
         return data.choices[0].message.content;
     } catch (error) {
         console.error('خطأ في التواصل مع OpenAI مع السياق:', error);
-        
+
         // رسائل خطأ أكثر وضوحاً
         if (error.message.includes('quota')) {
             return 'عذراً، تم تجاوز الحد المسموح لاستخدام الذكاء الاصطناعي. يرجى المحاولة لاحقاً.';
@@ -929,7 +929,7 @@ function openMediaPreview(type, url, description, mediaIndex = 0, tabType = '') 
                     <i class="fas fa-arrow-right"></i>
                     العودة لاستكشاف الوسائط
                 </button>
-                
+
                 <div class="media-navigation">
                     <button class="nav-media-btn" id="prevMedia" ${currentMediaArray.length === 0 || currentMediaIndex === 0 ? 'disabled' : ''}>
                         <i class="fas fa-chevron-right"></i>
@@ -968,7 +968,7 @@ function openMediaPreview(type, url, description, mediaIndex = 0, tabType = '') 
 // دالة لعرض الوسائط الحالية
 function displayCurrentMedia(type, url, description) {
     const mediaDisplay = document.getElementById('mediaDisplay');
-    
+
     // إزالة التوهج من جميع رسائل العرض السابقة
     const projectChat = document.getElementById('projectChat');
     if (projectChat) {
@@ -978,7 +978,7 @@ function displayCurrentMedia(type, url, description) {
             msg.style.animation = 'none';
         });
     }
-    
+
     if (type === 'image') {
         mediaDisplay.innerHTML = `
             <img src="${url}" alt="${description}" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 10px;">
@@ -1116,7 +1116,7 @@ function setupNavigationButtons(originalContent, mediaSection) {
         if (nextBtn) {
             nextBtn.disabled = currentMediaIndex === currentMediaArray.length - 1;
         }
-        
+
         // تحديث زر الفتح الخارجي
         const openExternalBtn = document.querySelector('.open-external');
         if (openExternalBtn && currentMediaArray.length > 0) {
@@ -1159,20 +1159,86 @@ function setupBackButton(url, type, originalContent, mediaSection) {
         setTimeout(() => {
             setupMediaTabs();
             setupMediaClickHandlers();
+            
+            // إعادة إضافة معالجات النقر لأزرار يوتيوب و PDF بشكل مباشر
+            reattachMediaButtonHandlers();
 
-            // إعادة تفعيل التبويب الأول إذا وجد
-            const firstTab = mediaSection.querySelector('.media-tab');
-            const firstTabContent = mediaSection.querySelector('.media-tab-content');
-            if (firstTab && firstTabContent) {
-                // إزالة جميع التفعيلات أولاً
-                mediaSection.querySelectorAll('.media-tab').forEach(tab => tab.classList.remove('active'));
-                mediaSection.querySelectorAll('.media-tab-content').forEach(content => content.classList.remove('active'));
+            // إعادة تفعيل التبويب "وسائط أخرى" إذا كنا في معاينة وسائط أخرى
+            if (currentMediaTab === 'other') {
+                const otherTab = mediaSection.querySelector('.media-tab[data-tab="other"]');
+                const otherTabContent = mediaSection.querySelector('#otherTab');
+                
+                if (otherTab && otherTabContent) {
+                    // إزالة جميع التفعيلات أولاً
+                    mediaSection.querySelectorAll('.media-tab').forEach(tab => tab.classList.remove('active'));
+                    mediaSection.querySelectorAll('.media-tab-content').forEach(content => content.classList.remove('active'));
 
-                // تفعيل الأول
-                firstTab.classList.add('active');
-                firstTabContent.classList.add('active');
+                    // تفعيل تبويب وسائط أخرى
+                    otherTab.classList.add('active');
+                    otherTabContent.classList.add('active');
+                }
+            } else {
+                // إعادة تفعيل التبويب الأول إذا لم نكن في وسائط أخرى
+                const firstTab = mediaSection.querySelector('.media-tab');
+                const firstTabContent = mediaSection.querySelector('.media-tab-content');
+                if (firstTab && firstTabContent) {
+                    // إزالة جميع التفعيلات أولاً
+                    mediaSection.querySelectorAll('.media-tab').forEach(tab => tab.classList.remove('active'));
+                    mediaSection.querySelectorAll('.media-tab-content').forEach(content => content.classList.remove('active'));
+
+                    // تفعيل الأول
+                    firstTab.classList.add('active');
+                    firstTabContent.classList.add('active');
+                }
             }
-        }, 200); // زيادة التأخير لضمان إعادة التهيئة الصحيحة
+        }, 200);
+    });
+}
+
+// دالة جديدة لإعادة إضافة معالجات النقر لأزرار الوسائط
+function reattachMediaButtonHandlers() {
+    // معالجة أزرار يوتيوب
+    document.querySelectorAll('.youtube-button').forEach(button => {
+        // إزالة المعالج القديم بإنشاء نسخة جديدة
+        const newButton = button.cloneNode(true);
+        button.parentNode.replaceChild(newButton, button);
+        
+        const type = newButton.dataset.type;
+        const url = newButton.dataset.url;
+        const description = newButton.dataset.description;
+        const mediaIndex = parseInt(newButton.dataset.mediaIndex) || 0;
+        const mediaType = newButton.dataset.mediaType || 'other';
+        
+        if (type && url && description) {
+            newButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('YouTube button click after restore:', {type, url, description, mediaIndex});
+                openMediaPreview(type, url, description, mediaIndex, mediaType);
+            });
+        }
+    });
+    
+    // معالجة أزرار PDF
+    document.querySelectorAll('.pdf-button').forEach(button => {
+        // إزالة المعالج القديم بإنشاء نسخة جديدة
+        const newButton = button.cloneNode(true);
+        button.parentNode.replaceChild(newButton, button);
+        
+        const type = newButton.dataset.type;
+        const url = newButton.dataset.url;
+        const description = newButton.dataset.description;
+        const mediaIndex = parseInt(newButton.dataset.mediaIndex) || 0;
+        const mediaType = newButton.dataset.mediaType || 'other';
+        
+        if (type && url && description) {
+            newButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('PDF button click after restore:', {type, url, description, mediaIndex});
+                openMediaPreview(type, url, description, mediaIndex, mediaType);
+            });
+        }
     });
 }
 
@@ -2032,12 +2098,12 @@ function setupMediaClickHandlers() {
             if (!button.hasAttribute('data-click-setup')) {
                 button.setAttribute('data-click-setup', 'true');
                 button.style.cursor = 'pointer';
-                
+
                 const type = button.dataset.type;
                 const url = button.dataset.url;
                 const description = button.dataset.description;
                 const mediaIndex = parseInt(button.dataset.mediaIndex) || 0;
-                
+
                 if (type && url && description) {
                     button.addEventListener('click', function(e) {
                         e.preventDefault();
@@ -2076,7 +2142,7 @@ function handleMediaClick(e) {
         if (mediaItem) {
             mediaIndex = parseInt(mediaItem.dataset.mediaIndex) || 0;
             tabType = mediaItem.dataset.mediaType || '';
-            
+
             // إذا لم يكن هناك وصف في dataset، ابحث عنه في العنصر
             if (!description) {
                 const descElement = mediaItem.querySelector('.media-description');
@@ -2145,7 +2211,7 @@ function handleMediaClick(e) {
         if (mediaItem) {
             mediaIndex = parseInt(mediaItem.dataset.mediaIndex) || 0;
             tabType = mediaItem.dataset.mediaType || '';
-            
+
             const thumbElement = mediaItem.querySelector('.media-thumb');
             if (thumbElement) {
                 type = thumbElement.dataset.type;
@@ -2170,5 +2236,6 @@ function handleMediaClick(e) {
     }
 
 }
+
 
 
