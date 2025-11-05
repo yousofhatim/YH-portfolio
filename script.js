@@ -77,6 +77,157 @@ let projectMediaData = {};
 let projectIndex = new Map(); // Map<projectId, {chats: [], explanation: string}>
 let isExplanationShown = new Set(); // Set<projectId>
 
+// متغيرات القراءة الصوتية
+let speechSynthesis = window.speechSynthesis;
+let isSpeechEnabled = false;
+let currentUtterance = null;
+
+// دالة لتهيئة القراءة الصوتية
+function initSpeechSynthesis() {
+    // التحقق من دعم المتصفح
+    if (!('speechSynthesis' in window)) {
+        console.warn('المتصفح لا يدعم القراءة الصوتية');
+        return false;
+    }
+    return true;
+}
+
+// دالة لقراءة النص بصوت عالٍ
+function speakText(text, lang = null) {
+    if (!speechSynthesis) {
+        console.error('القراءة الصوتية غير متوفرة');
+        return;
+    }
+
+    if (!isSpeechEnabled) {
+        console.log('القراءة الصوتية معطلة');
+        return;
+    }
+
+    // إيقاف أي قراءة جارية
+    if (speechSynthesis.speaking) {
+        speechSynthesis.cancel();
+    }
+
+    // تحديد اللغة تلقائياً بناءً على النص
+    if (!lang) {
+        // فحص إذا كان النص يحتوي على أحرف عربية
+        const arabicPattern = /[\u0600-\u06FF]/;
+        lang = arabicPattern.test(text) ? 'ar-SA' : 'en-US';
+    }
+
+    // إنشاء نص للقراءة
+    currentUtterance = new SpeechSynthesisUtterance(text);
+    currentUtterance.lang = lang;
+    currentUtterance.rate = lang === 'ar-SA' ? 0.9 : 1.0; // سرعة القراءة
+    currentUtterance.pitch = 1.0; // نبرة الصوت
+    currentUtterance.volume = 1.0; // مستوى الصوت
+
+    // معالجة الأحداث
+    currentUtterance.onstart = () => {
+        console.log('بدأت القراءة الصوتية');
+    };
+
+    currentUtterance.onend = () => {
+        console.log('انتهت القراءة الصوتية');
+        currentUtterance = null;
+    };
+
+    currentUtterance.onerror = (event) => {
+        console.error('خطأ في القراءة الصوتية:', event);
+        currentUtterance = null;
+    };
+
+    // بدء القراءة
+    console.log('جاري قراءة النص:', text.substring(0, 50) + '...');
+    speechSynthesis.speak(currentUtterance);
+}
+
+// دالة لإيقاف القراءة الصوتية
+function stopSpeech() {
+    if (speechSynthesis && speechSynthesis.speaking) {
+        speechSynthesis.cancel();
+        currentUtterance = null;
+    }
+}
+
+// دالة لتبديل حالة القراءة الصوتية
+function toggleSpeech() {
+    // التحقق من دعم المتصفح أولاً
+    if (!('speechSynthesis' in window)) {
+        alert('عذراً، متصفحك لا يدعم القراءة الصوتية');
+        return false;
+    }
+
+    isSpeechEnabled = !isSpeechEnabled;
+
+    if (!isSpeechEnabled) {
+        stopSpeech();
+    }
+
+    // تحديث أيقونة الزر
+    updateSpeechButtons();
+
+    console.log('القراءة الصوتية:', isSpeechEnabled ? 'مفعلة' : 'معطلة');
+
+    return isSpeechEnabled;
+}
+
+// دالة لتحديث أزرار القراءة الصوتية
+function updateSpeechButtons() {
+    const speechToggles = document.querySelectorAll('.speech-toggle');
+    speechToggles.forEach(toggle => {
+        const icon = toggle.querySelector('i');
+        if (icon) {
+            icon.className = isSpeechEnabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
+        }
+        toggle.title = isSpeechEnabled ? 'إيقاف القراءة الصوتية' : 'تفعيل القراءة الصوتية';
+    });
+}
+
+// دالة لإضافة زر القراءة الصوتية لرسالة معينة
+function addSpeechButton(messageElement, text, voiceType = 'default') {
+    if (!messageElement || messageElement.querySelector('.speech-btn')) return;
+
+    const speechBtn = document.createElement('button');
+    speechBtn.className = 'speech-btn';
+    speechBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+    speechBtn.title = 'قراءة الرسالة';
+
+    speechBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // تحديد الصوت بناءً على voiceType
+        let selectedVoice = null;
+        if (voiceType === 'female') {
+            const femaleVoices = speechSynthesis.getVoices().filter(voice => voice.lang.startsWith('en') && (voice.name.includes('Female') || voice.name.includes('Zira')));
+            selectedVoice = femaleVoices.length > 0 ? femaleVoices[0] : null;
+        } else if (voiceType === 'male') {
+            const maleVoices = speechSynthesis.getVoices().filter(voice => voice.lang.startsWith('en') && (voice.name.includes('Male') || voice.name.includes('David')));
+            selectedVoice = maleVoices.length > 0 ? maleVoices[0] : null;
+        }
+
+        // إذا تم العثور على صوت محدد، استخدمه
+        if (selectedVoice) {
+            currentUtterance = new SpeechSynthesisUtterance(text);
+            currentUtterance.voice = selectedVoice;
+            currentUtterance.lang = selectedVoice.lang;
+            currentUtterance.rate = 1.0;
+            currentUtterance.pitch = 1.0;
+            currentUtterance.volume = 1.0;
+
+            currentUtterance.onstart = () => console.log('بدأت القراءة الصوتية');
+            currentUtterance.onend = () => { console.log('انتهت القراءة الصوتية'); currentUtterance = null; };
+            currentUtterance.onerror = (event) => { console.error('خطأ في القراءة الصوتية:', event); currentUtterance = null; };
+            speechSynthesis.speak(currentUtterance);
+        } else {
+            // إذا لم يتم العثور على صوت محدد، استخدم الدالة speakText الافتراضية
+            speakText(text);
+        }
+    });
+
+    messageElement.appendChild(speechBtn);
+}
+
 // شريط التنقل
 function setupNavigation() {
     navItems.forEach(item => {
@@ -251,6 +402,9 @@ async function openProjectModal(projectId, projectImage, pdfUrl) {
                         <input type="text" class="chat-input" id="projectChatInput" placeholder="اسأل عن تفاصيل المشروع...">
                         <button class="send-button" id="projectChatSend">إرسال</button>
                     </div>
+                    <button class="speech-toggle" id="projectSpeechToggle" title="تفعيل القراءة الصوتية">
+                        <i class="fas fa-volume-mute"></i>
+                    </button>
                 </div>
 
                 <!-- عرض ملف PDF مباشرة إذا كان متوفراً -->
@@ -527,6 +681,9 @@ async function setupProjectChat(projectId) {
         if (isUser) {
             messageDiv.innerHTML = `<p>${text}</p>`;
             projectChat.appendChild(messageDiv);
+            autoScrollIfAtBottom(projectChat, true);
+            // إضافة زر القراءة الصوتية للرسائل
+            addSpeechButton(messageDiv, text);
         } else {
             const p = document.createElement('p');
             messageDiv.appendChild(p);
@@ -537,7 +694,10 @@ async function setupProjectChat(projectId) {
             } else {
                 // الحفاظ على التنسيق عند عرض الرسائل المحفوظة
                 p.innerHTML = text.replace(/\n/g, '<br>');
+                autoScrollIfAtBottom(projectChat, true);
             }
+            // إضافة زر القراءة الصوتية للرسائل
+            addSpeechButton(messageDiv, text);
         }
 
         // حفظ الرسالة في الذاكرة المحلية والقاعدة
@@ -570,9 +730,6 @@ async function setupProjectChat(projectId) {
                 explanation: isInitial ? text : projectExplanation
             });
         }
-
-        // التمرير للأسفل
-        projectChat.scrollTop = projectChat.scrollHeight;
     }
 
     // دالة محسنة لتأثير الكتابة مع الحفاظ على التنسيق
@@ -614,8 +771,8 @@ async function setupProjectChat(projectId) {
             const currentSpeed = formattedText.charAt(i) === ' ' ? speed * 0.3 : speed;
             await new Promise(resolve => setTimeout(resolve, currentSpeed));
 
-            // التمرير التلقائي للشات أثناء الكتابة
-            projectChat.scrollTop = projectChat.scrollHeight;
+            // التمرير التلقائي الذكي أثناء الكتابة
+            autoScrollIfAtBottom(projectChat, false);
         }
     }
 
@@ -701,6 +858,14 @@ async function setupProjectChat(projectId) {
         await addProjectMessage(projectExplanation, false, true, true, true);
     }
 
+    // إضافة معالج لزر تفعيل القراءة الصوتية في شات المشروع
+    const projectSpeechToggle = document.getElementById('projectSpeechToggle');
+    if (projectSpeechToggle) {
+        projectSpeechToggle.addEventListener('click', () => {
+            toggleSpeech();
+        });
+    }
+
     // معالجة النقر على زر الإرسال
     projectChatSend.addEventListener('click', sendMessage);
 
@@ -765,10 +930,167 @@ async function typewriterEffect(element, text, speed = 30) {
         const currentSpeed = text.charAt(i) === ' ' ? speed * 0.3 : speed;
         await new Promise(resolve => setTimeout(resolve, currentSpeed));
 
-        // التمرير التلقائي للشات أثناء الكتابة
+        // التمرير التلقائي الذكي
         const chatContainer = element.closest('.project-chat') || element.closest('.chat-container');
         if (chatContainer) {
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            autoScrollIfAtBottom(chatContainer, false);
+        }
+    }
+}
+
+// دالة لتهيئة القراءة الصوتية
+function initSpeechSynthesis() {
+    if (!('speechSynthesis' in window)) {
+        console.warn('المتصفح لا يدعم القراءة الصوتية');
+        return false;
+    }
+    return true;
+}
+
+// دالة لقراءة النص بصوت عالٍ
+function speakText(text, lang = null) {
+    if (!speechSynthesis) {
+        console.error('القراءة الصوتية غير متوفرة');
+        return;
+    }
+
+    if (!isSpeechEnabled) {
+        console.log('القراءة الصوتية معطلة');
+        return;
+    }
+
+    if (speechSynthesis.speaking) {
+        speechSynthesis.cancel();
+    }
+
+    // تحديد اللغة تلقائياً
+    if (!lang) {
+        const arabicPattern = /[\u0600-\u06FF]/;
+        lang = arabicPattern.test(text) ? 'ar-SA' : 'en-US';
+    }
+
+    currentUtterance = new SpeechSynthesisUtterance(text);
+    currentUtterance.lang = lang;
+    currentUtterance.rate = lang === 'ar-SA' ? 0.9 : 1.0;
+    currentUtterance.pitch = 1.0;
+    currentUtterance.volume = 1.0;
+
+    currentUtterance.onstart = () => console.log('بدأت القراءة الصوتية');
+    currentUtterance.onend = () => {
+        console.log('انتهت القراءة الصوتية');
+        currentUtterance = null;
+    };
+
+    currentUtterance.onerror = (event) => {
+        console.error('خطأ في القراءة الصوتية:', event);
+        currentUtterance = null;
+    };
+
+    console.log('جاري قراءة النص:', text.substring(0, 50) + '...');
+    speechSynthesis.speak(currentUtterance);
+}
+
+// دالة لإيقاف القراءة الصوتية
+function stopSpeech() {
+    if (speechSynthesis && speechSynthesis.speaking) {
+        speechSynthesis.cancel();
+        currentUtterance = null;
+    }
+}
+
+// دالة لتبديل حالة القراءة الصوتية
+function toggleSpeech() {
+    if (!('speechSynthesis' in window)) {
+        alert('عذراً، متصفحك لا يدعم القراءة الصوتية');
+        return false;
+    }
+
+    isSpeechEnabled = !isSpeechEnabled;
+
+    if (!isSpeechEnabled) {
+        stopSpeech();
+    }
+
+    updateSpeechButtons();
+
+    console.log('القراءة الصوتية:', isSpeechEnabled ? 'مفعلة' : 'معطلة');
+
+    return isSpeechEnabled;
+}
+
+// دالة لتحديث أزرار القراءة الصوتية
+function updateSpeechButtons() {
+    const speechToggles = document.querySelectorAll('.speech-toggle');
+    speechToggles.forEach(toggle => {
+        const icon = toggle.querySelector('i');
+        if (icon) {
+            icon.className = isSpeechEnabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
+        }
+        toggle.title = isSpeechEnabled ? 'إيقاف القراءة الصوتية' : 'تفعيل القراءة الصوتية';
+    });
+}
+
+// دالة لإضافة زر القراءة الصوتية لرسالة معينة
+function addSpeechButton(messageElement, text, voiceType = 'default') {
+    if (!messageElement || messageElement.querySelector('.speech-btn')) return;
+
+    const speechBtn = document.createElement('button');
+    speechBtn.className = 'speech-btn';
+    speechBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+    speechBtn.title = 'قراءة الرسالة';
+
+    speechBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        let selectedVoice = null;
+        if (voiceType === 'female') {
+            const femaleVoices = speechSynthesis.getVoices().filter(voice => voice.lang.startsWith('en') && (voice.name.includes('Female') || voice.name.includes('Zira')));
+            selectedVoice = femaleVoices.length > 0 ? femaleVoices[0] : null;
+        } else if (voiceType === 'male') {
+            const maleVoices = speechSynthesis.getVoices().filter(voice => voice.lang.startsWith('en') && (voice.name.includes('Male') || voice.name.includes('David')));
+            selectedVoice = maleVoices.length > 0 ? maleVoices[0] : null;
+        }
+
+        if (selectedVoice) {
+            currentUtterance = new SpeechSynthesisUtterance(text);
+            currentUtterance.voice = selectedVoice;
+            currentUtterance.lang = selectedVoice.lang;
+            currentUtterance.rate = 1.0;
+            currentUtterance.pitch = 1.0;
+            currentUtterance.volume = 1.0;
+
+            currentUtterance.onstart = () => console.log('بدأت القراءة الصوتية');
+            currentUtterance.onend = () => { console.log('انتهت القراءة الصوتية'); currentUtterance = null; };
+            currentUtterance.onerror = (event) => { console.error('خطأ في القراءة الصوتية:', event); currentUtterance = null; };
+            speechSynthesis.speak(currentUtterance);
+        } else {
+            speakText(text);
+        }
+    });
+
+    messageElement.appendChild(speechBtn);
+}
+
+
+// دالة للتحقق إذا كان المستخدم في نهاية الشات أو قريب منها
+function isUserAtBottom(container, threshold = 100) {
+    if (!container) return false;
+    const scrollPosition = container.scrollTop + container.clientHeight;
+    const scrollHeight = container.scrollHeight;
+    return scrollHeight - scrollPosition <= threshold;
+}
+
+// دالة للتمرير التلقائي السلس إذا كان المستخدم في الأسفل
+function autoScrollIfAtBottom(container, smooth = true) {
+    if (!container) return;
+
+    if (isUserAtBottom(container)) {
+        if (smooth) {
+            container.scrollTo({
+                top: container.scrollHeight,
+                behavior: 'smooth'
+            });
+        } else {
+            container.scrollTop = container.scrollHeight;
         }
     }
 }
@@ -787,7 +1109,7 @@ function showTypingIndicator(container) {
         <p style="margin: 0; padding-right: 10px;">يكتب الآن...</p>
     `;
     container.appendChild(typingDiv);
-    container.scrollTop = container.scrollHeight;
+    autoScrollIfAtBottom(container, true);
     return typingDiv;
 }
 
@@ -1053,12 +1375,11 @@ function addMediaMessageToChat(type, description, url) {
             <p class="media-description-text"></p>
         `;
         projectChat.appendChild(mediaMessage);
+        autoScrollIfAtBottom(projectChat, true);
 
         // تطبيق تأثير الكتابة التدريجية على الوصف
         const descriptionElement = mediaMessage.querySelector('.media-description-text');
         typewriterEffect(descriptionElement, description, 25);
-
-        projectChat.scrollTop = projectChat.scrollHeight;
 
         // حفظ الرسالة في فهرس المشروع المحلي
         if (projectIndex.has(currentProjectId)) {
@@ -1159,7 +1480,7 @@ function setupBackButton(url, type, originalContent, mediaSection) {
         setTimeout(() => {
             setupMediaTabs();
             setupMediaClickHandlers();
-            
+
             // إعادة إضافة معالجات النقر لأزرار يوتيوب و PDF بشكل مباشر
             reattachMediaButtonHandlers();
 
@@ -1167,7 +1488,7 @@ function setupBackButton(url, type, originalContent, mediaSection) {
             if (currentMediaTab === 'other') {
                 const otherTab = mediaSection.querySelector('.media-tab[data-tab="other"]');
                 const otherTabContent = mediaSection.querySelector('#otherTab');
-                
+
                 if (otherTab && otherTabContent) {
                     // إزالة جميع التفعيلات أولاً
                     mediaSection.querySelectorAll('.media-tab').forEach(tab => tab.classList.remove('active'));
@@ -1202,13 +1523,13 @@ function reattachMediaButtonHandlers() {
         // إزالة المعالج القديم بإنشاء نسخة جديدة
         const newButton = button.cloneNode(true);
         button.parentNode.replaceChild(newButton, button);
-        
+
         const type = newButton.dataset.type;
         const url = newButton.dataset.url;
         const description = newButton.dataset.description;
         const mediaIndex = parseInt(newButton.dataset.mediaIndex) || 0;
         const mediaType = newButton.dataset.mediaType || 'other';
-        
+
         if (type && url && description) {
             newButton.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -1218,19 +1539,19 @@ function reattachMediaButtonHandlers() {
             });
         }
     });
-    
+
     // معالجة أزرار PDF
     document.querySelectorAll('.pdf-button').forEach(button => {
         // إزالة المعالج القديم بإنشاء نسخة جديدة
         const newButton = button.cloneNode(true);
         button.parentNode.replaceChild(newButton, button);
-        
+
         const type = newButton.dataset.type;
         const url = newButton.dataset.url;
         const description = newButton.dataset.description;
         const mediaIndex = parseInt(newButton.dataset.mediaIndex) || 0;
         const mediaType = newButton.dataset.mediaType || 'other';
-        
+
         if (type && url && description) {
             newButton.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -1857,6 +2178,9 @@ async function setupDefenseChat() {
         if (isUser) {
             messageDiv.innerHTML = `<p>${text}</p>`;
             chatContainer.appendChild(messageDiv);
+            autoScrollIfAtBottom(chatContainer, true);
+            // إضافة زر القراءة الصوتية للرسائل
+            addSpeechButton(messageDiv, text);
         } else {
             const p = document.createElement('p');
             messageDiv.appendChild(p);
@@ -1867,7 +2191,10 @@ async function setupDefenseChat() {
             } else {
                 // الحفاظ على التنسيق عند عرض الرسائل المحفوظة
                 p.innerHTML = text.replace(/\n/g, '<br>');
+                autoScrollIfAtBottom(chatContainer, true);
             }
+            // إضافة زر القراءة الصوتية للرسائل (صوت أنثوي لخط الدفاع)
+            addSpeechButton(messageDiv, text, 'female');
         }
 
         // حفظ الرسالة في الذاكرة المحلية فقط إذا لم تكن محفوظة مسبقاً
@@ -1888,9 +2215,6 @@ async function setupDefenseChat() {
                 console.error('خطأ في حفظ الرسالة:', error);
             }
         }
-
-        // التمرير للأسفل
-        chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
     // دالة محسنة لتأثير الكتابة مع الحفاظ على التنسيق
@@ -1932,8 +2256,8 @@ async function setupDefenseChat() {
             const currentSpeed = formattedText.charAt(i) === ' ' ? speed * 0.3 : speed;
             await new Promise(resolve => setTimeout(resolve, currentSpeed));
 
-            // التمرير التلقائي للشات أثناء الكتابة
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            // التمرير التلقائي الذكي أثناء الكتابة
+            autoScrollIfAtBottom(chatContainer, false);
         }
     }
 
@@ -1996,6 +2320,21 @@ async function setupDefenseChat() {
         await addDefenseMessage(explainMessage, false, true, true); // true = احفظ في قاعدة البيانات
     }
 
+    // إضافة زر تفعيل القراءة الصوتية فوق الشات بوكس الرئيسي
+    const chatHeader = document.querySelector('.chat-header');
+    if (chatHeader) {
+        const mainSpeechToggle = document.createElement('button');
+        mainSpeechToggle.className = 'speech-toggle';
+        mainSpeechToggle.id = 'mainSpeechToggle';
+        mainSpeechToggle.title = 'تفعيل القراءة الصوتية';
+        mainSpeechToggle.innerHTML = '<i class="fas fa-volume-mute"></i>';
+        chatHeader.appendChild(mainSpeechToggle);
+
+        mainSpeechToggle.addEventListener('click', () => {
+            toggleSpeech();
+        });
+    }
+
     // معالجة النقر على زر الإرسال
     sendButton.addEventListener('click', sendMessage);
 
@@ -2024,6 +2363,15 @@ window.addEventListener('DOMContentLoaded', function() {
     pdfLoading = document.getElementById('pdfLoading');
     pdfError = document.getElementById('pdfError');
     pdfControls = document.getElementById('pdfControls');
+
+    // تهيئة القراءة الصوتية
+    const speechSupported = initSpeechSynthesis();
+    if (speechSupported) {
+        console.log('القراءة الصوتية مدعومة');
+    } else {
+        console.warn('القراءة الصوتية غير مدعومة في هذا المتصفح');
+    }
+    updateSpeechButtons();
 });
 
 // إعداد أزرار التبويبات
@@ -2108,7 +2456,7 @@ function setupMediaClickHandlers() {
                     button.addEventListener('click', function(e) {
                         e.preventDefault();
                         e.stopPropagation();
-                        console.log('Direct button click:', {type, url, description, mediaIndex});
+                        console.log('Direct button click:', {type, url, description});
                         openMediaPreview(type, url, description, mediaIndex, 'other');
                     });
                 }
@@ -2236,6 +2584,3 @@ function handleMediaClick(e) {
     }
 
 }
-
-
-
