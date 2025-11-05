@@ -149,17 +149,29 @@ function autoReadMessage(text, voiceType = 'male') {
     
     currentUtterance.onstart = () => {
         updateSpeechButtons(true);
+        // خفض صوت الموسيقى إلى 40%
+        if (backgroundMusic && !backgroundMusic.paused) {
+            backgroundMusic.volume = 0.4;
+        }
     };
     
     currentUtterance.onend = () => { 
         currentUtterance = null;
         updateSpeechButtons(false);
+        // إعادة صوت الموسيقى إلى 100%
+        if (backgroundMusic && !backgroundMusic.paused) {
+            backgroundMusic.volume = 1.0;
+        }
     };
     
     currentUtterance.onerror = (event) => { 
         console.error('خطأ في القراءة الصوتية:', event); 
         currentUtterance = null;
         updateSpeechButtons(false);
+        // إعادة صوت الموسيقى إلى 100%
+        if (backgroundMusic && !backgroundMusic.paused) {
+            backgroundMusic.volume = 1.0;
+        }
     };
     
     speechSynthesis.speak(currentUtterance);
@@ -482,12 +494,13 @@ async function openProjectModal(projectId, projectImage, pdfUrl) {
 
                 const youtubeContainer = categoryDiv.querySelector('#youtubeMedia');
                 mediaByType.youtube.forEach((item, index) => {
+                    const actualIndex = projectMediaData.otherMedia.indexOf(item);
                     const button = document.createElement('div');
                     button.className = 'media-button youtube-button';
                     button.dataset.type = 'youtube';
                     button.dataset.url = item.url;
                     button.dataset.description = item.description;
-                    button.dataset.mediaIndex = projectMediaData.otherMedia.indexOf(item);
+                    button.dataset.mediaIndex = actualIndex;
                     button.dataset.mediaType = 'other';
                     button.style.cursor = 'pointer';
                     button.innerHTML = `
@@ -499,7 +512,7 @@ async function openProjectModal(projectId, projectImage, pdfUrl) {
                     button.addEventListener('click', function(e) {
                         e.preventDefault();
                         e.stopPropagation();
-                        openMediaPreview('youtube', item.url, item.description, projectMediaData.otherMedia.indexOf(item), 'other');
+                        openMediaPreview('youtube', item.url, item.description, actualIndex, 'other');
                     });
 
                     youtubeContainer.appendChild(button);
@@ -518,12 +531,13 @@ async function openProjectModal(projectId, projectImage, pdfUrl) {
 
                 const pdfContainer = categoryDiv.querySelector('#pdfMedia');
                 mediaByType.pdf.forEach((item, index) => {
+                    const actualIndex = projectMediaData.otherMedia.indexOf(item);
                     const button = document.createElement('div');
                     button.className = 'media-button pdf-button';
                     button.dataset.type = 'pdf';
                     button.dataset.url = item.url;
                     button.dataset.description = item.description;
-                    button.dataset.mediaIndex = projectMediaData.otherMedia.indexOf(item);
+                    button.dataset.mediaIndex = actualIndex;
                     button.dataset.mediaType = 'other';
                     button.style.cursor = 'pointer';
                     button.innerHTML = `
@@ -535,7 +549,7 @@ async function openProjectModal(projectId, projectImage, pdfUrl) {
                     button.addEventListener('click', function(e) {
                         e.preventDefault();
                         e.stopPropagation();
-                        openMediaPreview('pdf', item.url, item.description, projectMediaData.otherMedia.indexOf(item), 'other');
+                        openMediaPreview('pdf', item.url, item.description, actualIndex, 'other');
                     });
 
                     pdfContainer.appendChild(button);
@@ -1218,6 +1232,26 @@ function displayCurrentMedia(type, url, description) {
                 متصفحك لا يدعم عرض الفيديو
             </video>
         `;
+        
+        // خفض صوت الموسيقى عند تشغيل الفيديو
+        const videoElement = mediaDisplay.querySelector('video');
+        if (videoElement) {
+            videoElement.addEventListener('play', () => {
+                if (backgroundMusic && !backgroundMusic.paused) {
+                    backgroundMusic.volume = 0.4;
+                }
+            });
+            videoElement.addEventListener('pause', () => {
+                if (backgroundMusic && !backgroundMusic.paused) {
+                    backgroundMusic.volume = 1.0;
+                }
+            });
+            videoElement.addEventListener('ended', () => {
+                if (backgroundMusic && !backgroundMusic.paused) {
+                    backgroundMusic.volume = 1.0;
+                }
+            });
+        }
     } else if (type === 'youtube') {
         const videoId = getYouTubeId(url);
         if (videoId) {
