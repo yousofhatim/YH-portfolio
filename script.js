@@ -92,6 +92,25 @@ function initSpeechSynthesis() {
     return true;
 }
 
+// دالة لضمان تحميل الأصوات قبل البدء
+function ensureVoicesLoaded() {
+    return new Promise((resolve) => {
+        const voices = speechSynthesis.getVoices();
+        if (voices.length > 0) {
+            resolve();
+        } else {
+            speechSynthesis.addEventListener('voiceschanged', () => {
+                resolve();
+            }, { once: true });
+            
+            // Timeout للتأكد من عدم الانتظار إلى الأبد
+            setTimeout(() => {
+                resolve();
+            }, 3000);
+        }
+    });
+}
+
 // دالة للقراءة الصوتية التلقائية
 function autoReadMessage(text, voiceType = 'male') {
     if (!autoReadEnabled || !speechSynthesis) return;
@@ -2104,6 +2123,9 @@ async function setupDefenseChat() {
 
     // تحويل الذاكرة لمصفوفة إذا كانت كائن
     let conversationMemory = Array.isArray(savedMemory) ? savedMemory : Object.values(savedMemory || {});
+
+    // التأكد من تحميل الأصوات قبل المتابعة
+    await ensureVoicesLoaded();
 
     // إضافة أزرار التحكم فوق صندوق الشات
     const defenseSection = document.querySelector('#defense-section');
